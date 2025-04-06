@@ -1,0 +1,14 @@
+#!/usr/bin/with-contenv bashio
+
+bashio::log.info "Arrêt de ioBroker..."
+
+if [ -f "/usr/bin/iobroker" ]; then
+    /usr/bin/iobroker stop
+elif [ -f "/opt/iobroker/node_modules/iobroker.js-controller/iobroker.js" ]; then
+    cd /opt/iobroker
+    node /opt/iobroker/node_modules/iobroker.js-controller/iobroker.js stop
+else
+    bashio::log.warning "Impossible de trouver la commande pour arrêter ioBroker proprement."
+fi
+
+bashio::log.info "ioBroker arrêté." 
