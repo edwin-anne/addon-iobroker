@@ -1,0 +1,67 @@
+#!/usr/bin/with-contenv bashio
+
+bashio::log.info "Initialisation de ioBroker..."
+
+# Vérifier si ioBroker est déjà installé
+if [ ! -d "/opt/iobroker/node_modules" ]; then
+    bashio::log.info "Installation de ioBroker..."
+    
+    # Préparer le répertoire
+    mkdir -p /opt/iobroker
+    chown -R iobroker:iobroker /opt/iobroker
+    
+    # Créer package.json pour installer ioBroker
+    cat > /opt/iobroker/package.json << EOF
+{
+    "name": "iobroker.inst",
+    "version": "3.0.0",
+    "private": true,
+    "description": "Automate your Life",
+    "engines": {
+        "node": ">=18.0.0"
+    },
+    "dependencies": {
+        "iobroker.js-controller": "stable",
+        "iobroker.admin": "stable",
+        "iobroker.discovery": "stable",
+        "iobroker.backitup": "stable"
+    }
+}
+EOF
+    
+    cd /opt/iobroker
+    npm i --production --loglevel error --unsafe-perm
+    
+    if [ $? -ne 0 ]; then
+        bashio::log.error "Échec de l'installation de ioBroker via npm"
+        exit 1
+    fi
+
+    bashio::log.info "ioBroker installé avec succès!"
+else
+    bashio::log.info "ioBroker est déjà installé, passage à l'étape suivante..."
+fi
+
+# Configurer les permissions
+if [ -d "/opt/iobroker" ]; then
+    bashio::log.info "Configuration des permissions..."
+    chown -R iobroker:iobroker /opt/iobroker
+    
+    # Donner à Node.js les droits nécessaires pour accéder aux ports privilégiés
+    if [ -f "$(which node)" ]; then
+        setcap 'cap_net_bind_service=+ep' $(which node)
+    fi
+fi
+
+# Créer un lien symbolique pour la commande iobroker
+if [ ! -f "/usr/bin/iobroker" ]; then
+    cat > /usr/bin/iobroker << EOF
+#!/bin/bash
+cd /opt/iobroker
+node /opt/iobroker/node_modules/iobroker.js-controller/iobroker.js "\$@"
+EOF
+    chmod +x /usr/bin/iobroker
+    ln -sf /usr/bin/iobroker /usr/bin/iob
+fi
+
+bashio::log.info "Initialisation terminée!" 

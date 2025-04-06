@@ -1,0 +1,112 @@
+#!/usr/bin/with-contenv bashio
+
+BACKUP_DIR=$(bashio::config 'backup_directory')
+
+function create_backup() {
+    local timestamp=$(date +%Y%m%d-%H%M%S)
+    local backup_file="${BACKUP_DIR}/iobroker-backup-${timestamp}.tar.gz"
+    
+    # Créer le répertoire de sauvegarde s'il n'existe pas
+    mkdir -p "${BACKUP_DIR}"
+    
+    bashio::log.info "Création d'une sauvegarde de ioBroker dans ${backup_file}..."
+    
+    # Arrêter ioBroker
+    if [ -f "/usr/bin/iobroker" ]; then
+        /usr/bin/iobroker stop
+    else
+        cd /opt/iobroker
+        node /opt/iobroker/node_modules/iobroker.js-controller/iobroker.js stop
+    fi
+    
+    # Attendre l'arrêt complet
+    sleep 5
+    
+    # Créer la sauvegarde
+    tar -czf "${backup_file}" -C /opt iobroker
+    
+    # Redémarrer ioBroker
+    if [ -f "/usr/bin/iobroker" ]; then
+        /usr/bin/iobroker start
+    else
+        cd /opt/iobroker
+        node /opt/iobroker/node_modules/iobroker.js-controller/iobroker.js start
+    fi
+    
+    bashio::log.info "Sauvegarde créée avec succès: ${backup_file}"
+}
+
+function restore_backup() {
+    local backup_file=$1
+    
+    if [ -z "${backup_file}" ]; then
+        bashio::log.error "Aucun fichier de sauvegarde spécifié!"
+        return 1
+    fi
+    
+    if [ ! -f "${backup_file}" ]; then
+        bashio::log.error "Le fichier de sauvegarde ${backup_file} n'existe pas!"
+        return 1
+    fi
+    
+    bashio::log.info "Restauration de la sauvegarde depuis ${backup_file}..."
+    
+    # Arrêter ioBroker
+    if [ -f "/usr/bin/iobroker" ]; then
+        /usr/bin/iobroker stop
+    else
+        cd /opt/iobroker
+        node /opt/iobroker/node_modules/iobroker.js-controller/iobroker.js stop
+    fi
+    
+    # Attendre l'arrêt complet
+    sleep 5
+    
+    # Sauvegarder la configuration actuelle
+    local timestamp=$(date +%Y%m%d-%H%M%S)
+    local temp_backup="${BACKUP_DIR}/iobroker-pre-restore-${timestamp}.tar.gz"
+    tar -czf "${temp_backup}" -C /opt iobroker
+    
+    # Supprimer l'installation actuelle
+    rm -rf /opt/iobroker
+    
+    # Restaurer depuis la sauvegarde
+    tar -xzf "${backup_file}" -C /opt
+    
+    # Corriger les permissions
+    chown -R iobroker:iobroker /opt/iobroker
+    
+    # Redémarrer ioBroker
+    if [ -f "/usr/bin/iobroker" ]; then
+        /usr/bin/iobroker start
+    else
+        cd /opt/iobroker
+        node /opt/iobroker/node_modules/iobroker.js-controller/iobroker.js start
+    fi
+    
+    bashio::log.info "Restauration terminée avec succès!"
+}
+
+function list_backups() {
+    bashio::log.info "Sauvegardes disponibles dans ${BACKUP_DIR}:"
+    ls -la "${BACKUP_DIR}" | grep "iobroker-backup"
+}
+
+# Menu principal
+case "$1" in
+    backup)
+        create_backup
+        ;;
+    restore)
+        restore_backup "$2"
+        ;;
+    list)
+        list_backups
+        ;;
+    *)
+        echo "Usage: $0 {backup|restore <fichier>|list}"
+        exit 1
+        ;;
+esac
+
+exit 0 
