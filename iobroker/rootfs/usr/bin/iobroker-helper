@@ -12,25 +12,32 @@ function create_backup() {
     bashio::log.info "Création d'une sauvegarde de ioBroker dans ${backup_file}..."
     
     # Arrêter ioBroker
+    bashio::log.info "Arrêt de ioBroker pour la sauvegarde..."
     if [ -f "/usr/bin/iobroker" ]; then
-        /usr/bin/iobroker stop
+        su -s /bin/bash -c "cd /opt/iobroker && node /opt/iobroker/node_modules/iobroker.js-controller/iobroker.js stop" iobroker
     else
-        cd /opt/iobroker
-        node /opt/iobroker/node_modules/iobroker.js-controller/iobroker.js stop
+        bashio::log.error "Commande iobroker non trouvée!"
+        return 1
     fi
     
     # Attendre l'arrêt complet
     sleep 5
     
+    # Vérifier si ioBroker est arrêté
+    if pgrep -f "node /opt/iobroker/node_modules/iobroker.js-controller" > /dev/null; then
+        bashio::log.warning "ioBroker ne s'est pas arrêté. Tentative de forçage..."
+        pkill -9 -f "node /opt/iobroker/node_modules/iobroker.js-controller" || true
+        sleep 2
+    fi
+    
     # Créer la sauvegarde
+    bashio::log.info "Création de l'archive..."
     tar -czf "${backup_file}" -C /opt iobroker
     
     # Redémarrer ioBroker
+    bashio::log.info "Redémarrage de ioBroker..."
     if [ -f "/usr/bin/iobroker" ]; then
-        /usr/bin/iobroker start
-    else
-        cd /opt/iobroker
-        node /opt/iobroker/node_modules/iobroker.js-controller/iobroker.js start
+        su -s /bin/bash -c "cd /opt/iobroker && node /opt/iobroker/node_modules/iobroker.js-controller/iobroker.js start" iobroker
     fi
     
     bashio::log.info "Sauvegarde créée avec succès: ${backup_file}"
@@ -52,36 +59,53 @@ function restore_backup() {
     bashio::log.info "Restauration de la sauvegarde depuis ${backup_file}..."
     
     # Arrêter ioBroker
+    bashio::log.info "Arrêt de ioBroker pour la restauration..."
     if [ -f "/usr/bin/iobroker" ]; then
-        /usr/bin/iobroker stop
-    else
-        cd /opt/iobroker
-        node /opt/iobroker/node_modules/iobroker.js-controller/iobroker.js stop
+        su -s /bin/bash -c "cd /opt/iobroker && node /opt/iobroker/node_modules/iobroker.js-controller/iobroker.js stop" iobroker
     fi
     
     # Attendre l'arrêt complet
     sleep 5
     
+    # Vérifier si ioBroker est arrêté
+    if pgrep -f "node /opt/iobroker/node_modules/iobroker.js-controller" > /dev/null; then
+        bashio::log.warning "ioBroker ne s'est pas arrêté. Tentative de forçage..."
+        pkill -9 -f "node /opt/iobroker/node_modules/iobroker.js-controller" || true
+        sleep 2
+    fi
+    
     # Sauvegarder la configuration actuelle
     local timestamp=$(date +%Y%m%d-%H%M%S)
     local temp_backup="${BACKUP_DIR}/iobroker-pre-restore-${timestamp}.tar.gz"
-    tar -czf "${temp_backup}" -C /opt iobroker
+    
+    # Vérifier si le répertoire existe avant de sauvegarder
+    if [ -d "/opt/iobroker" ]; then
+        tar -czf "${temp_backup}" -C /opt iobroker
+        bashio::log.info "Sauvegarde précédente créée: ${temp_backup}"
+    else
+        bashio::log.warning "Aucune installation existante à sauvegarder."
+    fi
     
     # Supprimer l'installation actuelle
+    bashio::log.info "Suppression de l'installation actuelle..."
     rm -rf /opt/iobroker
     
     # Restaurer depuis la sauvegarde
+    bashio::log.info "Extraction de la sauvegarde..."
+    mkdir -p /opt
     tar -xzf "${backup_file}" -C /opt
     
     # Corriger les permissions
+    bashio::log.info "Correction des permissions..."
     chown -R iobroker:iobroker /opt/iobroker
     
     # Redémarrer ioBroker
+    bashio::log.info "Démarrage de ioBroker après restauration..."
     if [ -f "/usr/bin/iobroker" ]; then
-        /usr/bin/iobroker start
+        su -s /bin/bash -c "cd /opt/iobroker && node /opt/iobroker/node_modules/iobroker.js-controller/iobroker.js start" iobroker
     else
-        cd /opt/iobroker
-        node /opt/iobroker/node_modules/iobroker.js-controller/iobroker.js start
+        bashio::log.error "Commande iobroker non trouvée après restauration!"
+        return 1
     fi
     
     bashio::log.info "Restauration terminée avec succès!"
@@ -89,7 +113,64 @@ function restore_backup() {
 
 function list_backups() {
     bashio::log.info "Sauvegardes disponibles dans ${BACKUP_DIR}:"
-    ls -la "${BACKUP_DIR}" | grep "iobroker-backup"
+    if [ -d "${BACKUP_DIR}" ]; then
+        find "${BACKUP_DIR}" -name "iobroker-backup-*.tar.gz" -type f | sort
+    else
+        bashio::log.warning "Le répertoire de sauvegarde n'existe pas encore."
+        mkdir -p "${BACKUP_DIR}"
+    fi
+}
+
+function restart_iobroker() {
+    bashio::log.info "Redémarrage de ioBroker..."
+    
+    # Arrêter ioBroker
+    if [ -f "/usr/bin/iobroker" ]; then
+        su -s /bin/bash -c "cd /opt/iobroker && node /opt/iobroker/node_modules/iobroker.js-controller/iobroker.js stop" iobroker
+    fi
+    
+    # Attendre l'arrêt complet
+    sleep 5
+    
+    # Vérifier si ioBroker est arrêté
+    if pgrep -f "node /opt/iobroker/node_modules/iobroker.js-controller" > /dev/null; then
+        bashio::log.warning "ioBroker ne s'est pas arrêté. Tentative de forçage..."
+        pkill -9 -f "node /opt/iobroker/node_modules/iobroker.js-controller" || true
+        sleep 2
+    fi
+    
+    # Redémarrer ioBroker
+    if [ -f "/usr/bin/iobroker" ]; then
+        su -s /bin/bash -c "cd /opt/iobroker && node /opt/iobroker/node_modules/iobroker.js-controller/iobroker.js start" iobroker
+        bashio::log.info "ioBroker redémarré!"
+    else
+        bashio::log.error "Commande iobroker non trouvée!"
+        return 1
+    fi
+}
+
+function show_status() {
+    bashio::log.info "Statut de ioBroker:"
+    
+    # Vérifier si les processus sont en cours d'exécution
+    if pgrep -f "node /opt/iobroker/node_modules/iobroker.js-controller" > /dev/null; then
+        bashio::log.info "ioBroker est en cours d'exécution:"
+        ps aux | grep -v grep | grep "node /opt/iobroker/node_modules/iobroker.js-controller"
+    else
+        bashio::log.warning "ioBroker n'est pas en cours d'exécution!"
+    fi
+    
+    # Informations sur le réseau
+    bashio::log.info "Informations réseau:"
+    ip addr show
+    
+    # Vérifier les ports en écoute
+    bashio::log.info "Ports en écoute:"
+    netstat -tuln | grep "LISTEN"
+    
+    # Vérifier l'espace disque
+    bashio::log.info "Espace disque:"
+    df -h
 }
 
 # Menu principal
@@ -103,8 +184,14 @@ case "$1" in
     list)
         list_backups
         ;;
+    restart)
+        restart_iobroker
+        ;;
+    status)
+        show_status
+        ;;
     *)
-        echo "Usage: $0 {backup|restore <fichier>|list}"
+        echo "Usage: $0 {backup|restore <fichier>|list|restart|status}"
         exit 1
         ;;
 esac

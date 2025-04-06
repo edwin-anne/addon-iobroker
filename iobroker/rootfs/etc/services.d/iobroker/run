@@ -7,12 +7,22 @@ export NODE_ENV=production
 
 cd /opt/iobroker
 
+# Afficher les informations système avant de démarrer
+bashio::log.info "Informations système:"
+bashio::log.info "Utilisateur actuel: $(whoami)"
+bashio::log.info "Vérification de l'utilisateur iobroker: $(id iobroker 2>/dev/null || echo 'Non trouvé')"
+bashio::log.info "Contenu du répertoire ioBroker:"
+ls -la /opt/iobroker
+
 # Vérifier si le contrôleur existe
 if [ -f "/opt/iobroker/node_modules/iobroker.js-controller/iobroker.js" ]; then
     # Démarrer ioBroker
     bashio::log.info "Lancement du service ioBroker..."
+    cd /opt/iobroker
     exec s6-setuidgid iobroker node /opt/iobroker/node_modules/iobroker.js-controller/iobroker.js start
 else
     bashio::log.error "Le contrôleur ioBroker n'est pas installé!"
+    bashio::log.error "Contenu du répertoire node_modules:"
+    ls -la /opt/iobroker/node_modules/ || echo "Le répertoire node_modules n'existe pas"
     exit 1
 fi 

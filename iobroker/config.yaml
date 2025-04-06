@@ -1,6 +1,6 @@
 name: "ioBroker"
 description: "Plateforme de domotique ioBroker pour Home Assistant"
-version: "1.0.1"
+version: "1.0.2"
 slug: "iobroker"
 init: false
 arch:
@@ -14,8 +14,8 @@ options:
   backup_directory: /share/iobroker_backups
 schema:
   backup_directory: str
-image: "ghcr.io/{build.repository}/iobroker-{build.arch}:1.0.1"
-journald: false
+image: "ghcr.io/{build.repository}/iobroker-{build.arch}:1.0.2"
+journald: true
 apparmor: false
 privileged:
   - NET_ADMIN
@@ -44,12 +44,14 @@ ingress: true
 ingress_port: 8081
 panel_icon: mdi:server-network
 panel_title: ioBroker
-host_network: false
-host_dbus: false
+host_network: true
+host_dbus: true
 uart: false
 usb: false
 map:
   - share:rw
   - homeassistant:ro
   - addon_config:rw
-webui: "http://[HOST]:[PORT:8081]" 
+webui: "http://[HOST]:8081"
+init_commands:
+  - /etc/cont-init.d/10-init-iobroker 

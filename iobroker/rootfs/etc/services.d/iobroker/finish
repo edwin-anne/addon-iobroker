@@ -4,10 +4,28 @@ bashio::log.info "Arrêt de ioBroker..."
 
 cd /opt/iobroker
 
-if [ -f "/opt/iobroker/node_modules/iobroker.js-controller/iobroker.js" ]; then
-    node /opt/iobroker/node_modules/iobroker.js-controller/iobroker.js stop
+# Vérifier la présence de l'utilisateur iobroker
+if id iobroker &>/dev/null; then
+    if [ -f "/opt/iobroker/node_modules/iobroker.js-controller/iobroker.js" ]; then
+        # Arrêt en utilisant l'utilisateur iobroker
+        su -s /bin/bash -c "cd /opt/iobroker && node /opt/iobroker/node_modules/iobroker.js-controller/iobroker.js stop" iobroker
+    else
+        bashio::log.warning "Impossible de trouver le contrôleur ioBroker pour l'arrêter proprement."
+    fi
 else
-    bashio::log.warning "Impossible de trouver le contrôleur ioBroker pour l'arrêter proprement."
+    bashio::log.warning "L'utilisateur iobroker n'existe pas. Arrêt forcé des processus Node.js..."
+    pkill -f "node /opt/iobroker/node_modules/iobroker.js-controller" || true
+fi
+
+# Attendre que tous les processus ioBroker se terminent
+if pgrep -f "node /opt/iobroker/node_modules/iobroker.js-controller" > /dev/null; then
+    bashio::log.info "Attente de l'arrêt des processus ioBroker..."
+    sleep 5
+    # Si après 5 secondes, des processus existent encore, les forcer
+    if pgrep -f "node /opt/iobroker/node_modules/iobroker.js-controller" > /dev/null; then
+        bashio::log.warning "Forçage de l'arrêt des processus ioBroker..."
+        pkill -9 -f "node /opt/iobroker/node_modules/iobroker.js-controller" || true
+    fi
 fi
 
 bashio::log.info "ioBroker arrêté." 

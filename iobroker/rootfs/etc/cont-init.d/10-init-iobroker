@@ -2,6 +2,9 @@
 
 bashio::log.info "Initialisation de ioBroker..."
 
+# Installer des outils supplémentaires pour le diagnostic
+apk add --no-cache procps net-tools nano
+
 # Vérifier si ioBroker est déjà installé
 if [ ! -d "/opt/iobroker/node_modules" ]; then
     bashio::log.info "Installation de ioBroker..."
@@ -30,7 +33,18 @@ if [ ! -d "/opt/iobroker/node_modules" ]; then
 EOF
     
     cd /opt/iobroker
-    npm i --production --loglevel error --unsafe-perm
+    
+    # Configurer npm
+    npm config set registry https://registry.npmjs.org/
+    npm config set unsafe-perm true
+    
+    # Afficher la version de Node et NPM
+    bashio::log.info "Version de Node: $(node -v)"
+    bashio::log.info "Version de NPM: $(npm -v)"
+    
+    # Installation des dépendances
+    bashio::log.info "Installation des dépendances ioBroker..."
+    su -s /bin/bash -c "cd /opt/iobroker && npm i --production --loglevel error" iobroker
     
     if [ $? -ne 0 ]; then
         bashio::log.error "Échec de l'installation de ioBroker via npm"
@@ -58,10 +72,19 @@ if [ ! -f "/usr/bin/iobroker" ]; then
     cat > /usr/bin/iobroker << EOF
 #!/bin/bash
 cd /opt/iobroker
-node /opt/iobroker/node_modules/iobroker.js-controller/iobroker.js "\$@"
+su -s /bin/bash -c "cd /opt/iobroker && node /opt/iobroker/node_modules/iobroker.js-controller/iobroker.js \$*" iobroker
 EOF
     chmod +x /usr/bin/iobroker
     ln -sf /usr/bin/iobroker /usr/bin/iob
 fi
+
+# Vérification des fichiers ioBroker
+bashio::log.info "Vérification de l'installation:"
+ls -la /opt/iobroker
+ls -la /opt/iobroker/node_modules/ | grep iobroker
+
+# Configuration du réseau pour ioBroker
+IP=$(hostname -I | awk '{print $1}')
+bashio::log.info "IP du conteneur: $IP"
 
 bashio::log.info "Initialisation terminée!" 
