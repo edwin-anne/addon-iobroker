@@ -1,0 +1,45 @@
+#include <tunables/global>
+
+profile iobroker flags=(attach_disconnected,mediate_deleted) {
+  #include <abstractions/base>
+
+  # Les permissions nécessaires pour ioBroker
+  capability net_bind_service,
+  capability net_admin,
+  capability net_raw,
+  capability sys_admin,
+  capability sys_rawio,
+  
+  # Permettre la communication réseau
+  network,
+  
+  # Accès aux fichiers
+  /bin/** ix,
+  /usr/bin/** ix,
+  /usr/local/bin/** ix,
+  /sbin/** ix,
+  /usr/sbin/** ix,
+  
+  # Accès aux répertoires de données
+  /data/** rwlk,
+  /share/** rwlk,
+  /config/** rwlk,
+  /ssl/** r,
+  /etc/** r,
+  /etc/hosts.allow r,
+  /etc/hosts.deny r,
+  
+  # ioBroker nécessite l'accès aux dispositifs
+  /dev/** rwlk,
+  
+  # S6-Overlay paths
+  /run/{s6,s6-rc*,service}/** rwk,
+  /package/** r,
+  /command/** ix,
+  /etc/services.d/** rwix,
+  /etc/cont-init.d/** rwix,
+  /etc/cont-finish.d/** rwix,
+  /init rix,
+  /run/** rwk,
+  /dev/tty rw,
+} 

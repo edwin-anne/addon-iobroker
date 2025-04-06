@@ -1,0 +1,4 @@
+# https://developers.home-assistant.io/docs/add-ons/repository#repository-configuration
+name: ioBroker Home Assistant add-on
+url: 'https://github.com/edwin-anne/addon-iobroker'
+maintainer: Edwin Anne 
