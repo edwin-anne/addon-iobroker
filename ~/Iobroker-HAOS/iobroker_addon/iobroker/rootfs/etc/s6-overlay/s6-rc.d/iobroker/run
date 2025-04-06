@@ -1,0 +1,53 @@
+#!/usr/bin/with-contenv bash
+
+echo "Démarrage d'ioBroker..."
+
+# Vérifiez si ioBroker est déjà installé
+if [ ! -d "/opt/iobroker/node_modules" ]; then
+    echo "ioBroker n'est pas installé. Installation en cours..."
+    
+    # Installation d'ioBroker en utilisant le script fourni avec des options non-interactives
+    cd /tmp
+    curl -sLf https://iobroker.net/install.sh > install.sh
+    echo "Téléchargement du script d'installation terminé."
+    
+    # Exécution en mode non-interactif
+    echo "Démarrage de l'installation non-interactive..."
+    bash install.sh --non-interactive
+    
+    if [ $? -eq 0 ]; then
+        echo "Installation d'ioBroker terminée avec succès."
+    else
+        echo "Erreur lors de l'installation d'ioBroker. Code de retour: $?"
+        # Tentative d'installation alternative
+        cd /opt
+        echo "Tentative d'installation manuelle..."
+        curl -sLf https://iobroker.net/install.sh | bash -
+    fi
+else
+    echo "ioBroker est déjà installé, démarrage du service..."
+    cd /opt/iobroker
+    node node_modules/iobroker.js-controller/controller.js start
+    if [ $? -ne 0 ]; then
+        echo "Erreur lors du démarrage d'ioBroker. Tentative de réparation..."
+        # Tentative de réparation
+        cd /opt/iobroker
+        node node_modules/iobroker.js-controller/controller.js setup
+        node node_modules/iobroker.js-controller/controller.js start
+    fi
+fi
+
+# Vérification du statut des ports
+echo "Vérification des ports en écoute..."
+netstat -tulpn | grep "LISTEN"
+
+# Gardez le script en cours d'exécution pour empêcher le redémarrage du conteneur
+while true; do
+    # Vérifiez si le processus ioBroker est toujours en cours d'exécution
+    if ! pgrep -f "node /opt/iobroker/node_modules/iobroker.js-controller/controller.js" > /dev/null; then
+        echo "ioBroker n'est pas en cours d'exécution. Redémarrage..."
+        cd /opt/iobroker
+        node node_modules/iobroker.js-controller/controller.js start
+    fi
+    sleep 60
+done 

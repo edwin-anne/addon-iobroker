@@ -1,0 +1,27 @@
+#!/usr/bin/with-contenv bash
+
+echo "Arrêt du service ioBroker..."
+
+# Arrêt propre du service ioBroker
+if pgrep -f "node_modules/iobroker.js-controller/controller.js" > /dev/null; then
+    cd /opt/iobroker
+    node node_modules/iobroker.js-controller/controller.js stop
+    
+    # Attendre l'arrêt complet
+    for i in {1..30}; do
+        if ! pgrep -f "node_modules/iobroker.js-controller/controller.js" > /dev/null; then
+            echo "ioBroker s'est arrêté correctement."
+            break
+        fi
+        echo "En attente de l'arrêt d'ioBroker (tentative $i/30)..."
+        sleep 1
+    done
+    
+    # Forcer l'arrêt si nécessaire
+    if pgrep -f "node_modules/iobroker.js-controller/controller.js" > /dev/null; then
+        echo "ioBroker ne s'est pas arrêté correctement. Arrêt forcé..."
+        pkill -f "node_modules/iobroker.js-controller/controller.js"
+    fi
+fi
+
+echo "Service ioBroker arrêté." 

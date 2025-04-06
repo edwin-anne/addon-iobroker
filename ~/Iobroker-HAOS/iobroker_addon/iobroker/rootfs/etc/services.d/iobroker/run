@@ -1,0 +1,36 @@
+#!/usr/bin/with-contenv bash
+
+# Assurez-vous que les répertoires existent
+mkdir -p /opt/iobroker
+mkdir -p /data/iobroker
+
+# Définir les permissions
+chown -R iobroker:iobroker /opt/iobroker
+chown -R iobroker:iobroker /data/iobroker
+
+# Exécutez le script d'initialisation
+source /etc/s6-overlay/scripts/iobroker-init.sh
+
+echo "Vérification de la disponibilité du service..."
+
+# Vérification si le service est déjà en cours d'exécution
+if pgrep -f "node_modules/iobroker.js-controller/controller.js" > /dev/null; then
+    echo "Un processus ioBroker est déjà en cours d'exécution. Arrêt..."
+    cd /opt/iobroker
+    node node_modules/iobroker.js-controller/controller.js stop
+    sleep 5
+fi
+
+# Vérification des ports en écoute
+echo "Ports en écoute avant démarrage:"
+netstat -tulpn | grep "LISTEN" || echo "Aucun port en écoute ou netstat non disponible"
+
+# Démarrez ioBroker en tant qu'utilisateur iobroker avec un timeout plus long
+cd /opt/iobroker
+echo "Démarrage d'ioBroker avec des logs détaillés..."
+
+# Augmentation du délai de démarrage
+export NODE_OPTIONS="--max-old-space-size=512"
+
+# Démarrage avec journalisation verbose
+exec s6-setuidgid iobroker node node_modules/iobroker.js-controller/controller.js start 
