@@ -5,17 +5,14 @@ bashio::log.info "Démarrage de ioBroker..."
 # Configurer les variables d'environnement
 export NODE_ENV=production
 
-# Démarrer ioBroker
-bashio::log.info "Lancement du service ioBroker..."
+cd /opt/iobroker
 
-if [ -f "/usr/bin/iobroker" ]; then
-    # Utiliser la commande iobroker
-    exec s6-setuidgid iobroker /usr/bin/iobroker start
-elif [ -f "/opt/iobroker/node_modules/iobroker.js-controller/iobroker.js" ]; then
-    # Démarrer directement via le contrôleur
-    cd /opt/iobroker
+# Vérifier si le contrôleur existe
+if [ -f "/opt/iobroker/node_modules/iobroker.js-controller/iobroker.js" ]; then
+    # Démarrer ioBroker
+    bashio::log.info "Lancement du service ioBroker..."
     exec s6-setuidgid iobroker node /opt/iobroker/node_modules/iobroker.js-controller/iobroker.js start
 else
-    bashio::log.error "Impossible de trouver l'exécutable ioBroker!"
+    bashio::log.error "Le contrôleur ioBroker n'est pas installé!"
     exit 1
 fi 
