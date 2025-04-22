@@ -5,12 +5,9 @@ FROM $BUILD_FROM
 RUN \
   apk add --no-cache \
     nodejs \
-    npm \
-    netcat-openbsd \
-    bash
+    npm
 
-# Python 3 HTTP Server serves the current working dir
-# So let's set it to our add-on persistent data directory.
+# Set working directory to persistent data directory
 WORKDIR /data
 
 # Copy data for add-on
