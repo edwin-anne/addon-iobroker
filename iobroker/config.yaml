@@ -1,16 +1,17 @@
 name: "ioBroker"
+description: "ioBroker Home Assistant Add-on"
 version: "1.0.0"
 slug: "iobroker"
-description: "ioBroker Home Assistant Add-on"
-url: "https://github.com/edwin-anne/addon-iobroker"
+init: false
 arch:
+  - aarch64
   - amd64
+  - armhf
   - armv7
-  - arm64
-startup: application
-boot: auto
+  - i386
+startup: services
 ports:
-  "8081/tcp": 8081
+  8081/tcp: 8081
 ports_description:
   "8081/tcp": "Web interface"
 map:

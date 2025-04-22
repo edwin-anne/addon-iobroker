@@ -1,21 +1,18 @@
 ARG BUILD_FROM
 FROM $BUILD_FROM
 
-# Installer les dépendances nécessaires
-RUN apk add --no-cache nodejs npm
+# Install requirements for add-on
+RUN \
+  apk add --no-cache \
+    nodejs \
+    npm
 
-# Créer le répertoire de travail
-WORKDIR /opt/iobroker
+# Python 3 HTTP Server serves the current working dir
+# So let's set it to our add-on persistent data directory.
+WORKDIR /data
 
-# Installer ioBroker
-RUN npm install iobroker --unsafe-perm
-
-# Copier le script de démarrage
+# Copy data for add-on
 COPY run.sh /
 RUN chmod a+x /run.sh
 
-# Exposer le port
-EXPOSE 8081
-
-# Lancer le script de démarrage
 CMD [ "/run.sh" ] 

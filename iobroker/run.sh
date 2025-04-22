@@ -1,10 +1,11 @@
 #!/usr/bin/with-contenv bashio
 
-# Récupérer les options de configuration
-PORT=$(bashio::config 'port')
+echo "Hello world!"
+
+# Installer ioBroker
+npm install iobroker --unsafe-perm
 
 # Démarrer ioBroker
-cd /opt/iobroker
 iobroker start
 
 # Attendre que ioBroker soit prêt
