@@ -1,0 +1,16 @@
+name: ioBroker Hello World
+version: "1.0.0"
+description: Un module complémentaire Hello World pour ioBroker
+maintainer: Votre Nom <votre@email.com>
+arch:
+  - amd64
+  - armv7
+  - arm64
+startup: application
+boot: auto
+ports:
+  "8080/tcp": 8080
+volumes:
+  - /app/data:/app/data
+environment:
+  NODE_ENV: production 
