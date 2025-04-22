@@ -16,8 +16,23 @@ ports_description:
   "8081/tcp": "Web interface"
 map:
   - config:rw
-schema: {}
-options: {}
+  - ssl:rw
+  - addons:rw
+  - backup:rw
+  - share:rw
+options:
+  log_level: info
+schema:
+  log_level:
+    name: "Log Level"
+    description: "Niveau de log"
+    type: select
+    options:
+      - debug
+      - info
+      - warning
+      - error
+    default: info
 volumes:
   - /app/data:/app/data
 environment:
